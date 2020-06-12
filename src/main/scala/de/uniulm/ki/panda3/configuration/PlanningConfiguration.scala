@@ -631,7 +631,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         assert(domainAndPlan._1.isGround)
         val planStepStrings: Seq[String] = planToVerity.split(";")
         // check whether the given plan steps are contained in the grounding
-        val notContainedPSs = planStepStrings filterNot { t => domainAndPlan._1.tasks.exists(_.name == t) }
+        val notContainedPSs = planStepStrings filterNot { t =>
+          domainAndPlan._1.tasks.exists(_.name.takeWhile(_ != ';') == t.replaceAll("]",""))
+        }
 
         if (notContainedPSs.nonEmpty) {
           println("Plan to verify contains actions " + notContainedPSs.mkString(", ") + " which are not delete-relaxed reachable.")
@@ -641,7 +643,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           })
         } else {
 
-          val taskSequenceToVerify: Seq[Task] = planStepStrings map { t => domainAndPlan._1.tasks.find(_.name == t).get }
+          val taskSequenceToVerify: Seq[Task] =
+            planStepStrings map { t => domainAndPlan._1.tasks.find(_.name.takeWhile(_ != ';') == t.replaceAll("]","")).get }
 
           (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
             val runner = VerifyRunner(domainAndPlan._1, domainAndPlan._2, solverType)
@@ -1598,11 +1601,16 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       val result = searchConfiguration match {
         case SATPlanVerification(_, plan) =>
-          val planActions = plan.split(";")
-          val primitivesNotOccurringInPlan = groundingResult._1.primitiveTasks filterNot { t => groundingResult._2.planStepTasksSet.contains(t) || planActions.contains(t.name) }
+          val planActions = plan.split(";") map {_.replaceAll("]","")}
+          val primitivesNotOccurringInPlan = groundingResult._1.primitiveTasks filterNot { t =>
+            val clearName = t.name.takeWhile( _ != ';')
+
+            groundingResult._2.planStepTasksSet.contains(t) || planActions.contains(clearName)
+          }
           PruneHierarchy.transform(groundingResult, primitivesNotOccurringInPlan.toSet)
         case _                            => groundingResult
       }
+
 
       timeCapsule stop GROUNDING
       info("done.\n")

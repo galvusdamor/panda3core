@@ -507,7 +507,8 @@ public class hddlPanda3Visitor {
                 if (el.literal().atomic_formula() != null) {
                     initEffects.add(visitAtomFormula(vctx, predicates, sorts, constraints, true, el.literal().atomic_formula()));
                 } else if (el.literal().neg_atomic_formula() != null) {
-                    initEffects.add(visitAtomFormula(vctx, predicates, sorts, constraints, false, el.literal().atomic_formula()));
+                    // negative condition in init --- just ignore it!
+                    //initEffects.add(visitAtomFormula(vctx, predicates, sorts, constraints, false, el.literal().neg_atomic_formula()));
                 }
             } else if (el.num_init() != null) { // numeric init, for action costs
                 assert (el.num_init().f_head().func_symbol() != null);

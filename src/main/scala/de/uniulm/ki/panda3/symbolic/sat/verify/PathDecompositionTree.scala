@@ -308,7 +308,13 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
 
   def possibleAssigmentsDFS(task: Task): Seq[(Seq[Int], Task)] = if (possiblePrimitives contains task) (path, task) :: Nil else {
     val subAssigments: Seq[(Seq[Int], Task)] = possibleMethods.zipWithIndex filter { _._1._1.abstractTask == task } flatMap { case ((method, _), idx) =>
-      methodToPositions(idx).zip(method.subPlan.planStepSchemaArrayWithoutMethodPreconditions) flatMap { case (childIndex, childTask) => children(childIndex)
+
+      val ordering: Seq[Task] = if (omitMethodPreconditions && method.subPlan.planStepSchemaArrayWithoutMethodPreconditions.nonEmpty)
+        method.subPlan.planStepSchemaArrayWithoutMethodPreconditions else method.subPlan.planStepSchemaArray
+
+      assert(methodToPositions(idx).size == ordering.size)
+
+      methodToPositions(idx).zip(ordering) flatMap { case (childIndex, childTask) => children(childIndex)
         .possibleAssigmentsDFS(childTask)
       }
     }
@@ -319,7 +325,12 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
   lazy val assignmentImplications: Seq[(Seq[Int], ((Task, Int), Int))] = {
     val winrar: Map[(Task, Int), Int] = // number of methods for which a specific task is assigned to a position. If this 1, we can add an implication
       possibleMethods.zipWithIndex flatMap { case ((dm, mGlobalID), mindex) =>
-        dm.subPlan.planStepSchemaArrayWithoutMethodPreconditions.zip(methodToPositions(mindex)) map { x => (x, mGlobalID) }
+        val ordering: Seq[Task] = if (omitMethodPreconditions && dm.subPlan.planStepSchemaArrayWithoutMethodPreconditions.nonEmpty)
+          dm.subPlan.planStepSchemaArrayWithoutMethodPreconditions else dm.subPlan.planStepSchemaArray
+
+        assert(methodToPositions(mindex).size == ordering.size)
+
+        ordering.zip(methodToPositions(mindex)) map { x => (x, mGlobalID) }
       } groupBy { _._1 } filter { _._2.length == 1 } filterNot { possiblePrimitives contains _._1._1 } map { case (k, v) => k -> v.head._2 }
 
     children.flatMap(_.assignmentImplications) ++ winrar.toSeq.map(a => path -> a)

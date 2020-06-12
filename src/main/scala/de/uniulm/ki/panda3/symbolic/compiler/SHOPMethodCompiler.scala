@@ -45,10 +45,8 @@ object SHOPMethodCompiler extends DomainTransformerWithOutInformation {
           // make this plan step the first actual task in the method
 
 
-          val newOrderingWithPrec = if (!precondition.isEmpty)
-            subPlan.orderingConstraints.addOrderings(OrderingConstraint.allAfter(preconditionPlanStep, subPlan.planStepsWithoutInitGoal :+ subPlan.goal: _*))
+          val newOrderingWithPrec = subPlan.orderingConstraints.addOrderings(OrderingConstraint.allAfter(preconditionPlanStep, subPlan.planStepsWithoutInitGoal :+ subPlan.goal: _*))
               .addOrdering(subPlan.init, preconditionPlanStep)
-          else subPlan.orderingConstraints
 
           val additionalPlanSteps: Seq[PlanStep] = preconditionPlanStep :: Nil
 

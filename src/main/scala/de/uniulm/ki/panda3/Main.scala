@@ -398,21 +398,32 @@ object Main {
       //println(plan.planStepsAndRemovedPlanSteps.map(_.schema).map({ t => t.isPrimitive + " " + t.name }).toSeq.sorted mkString "\n")
       //println(plan.planStepDecomposedByMethod.values.map({ m => m.name + " " + m.abstractTask.name }).toSeq.sorted mkString "\n")
 
-      println("==>")
 
       val fullMode = false
 
       def psToString(ps: PlanStep): String = psNameToSimpleName(ps.schema.name, fullMode)
 
-      def getAllSortedChildren(children: Seq[(PlanStep, (PlanStep, PlanStep))], abstractPS: PlanStep) = {
-        val topOrdIndices = plan.planStepDecomposedByMethod(abstractPS).subPlan.subtasksWithOrderedIndices
+      def getAllSortedChildren(children: Seq[(PlanStep, (PlanStep, PlanStep))], abstractPS: PlanStep) : Seq[Either[PlanStep,Unit]] = {
+        val topOrdIndices = plan.planStepDecomposedByMethod(abstractPS).subPlan.subtasksWithOrderedIndicesWithSHOPTasks
 
-        children.sortWith({ case (a, b) => topOrdIndices(a._2._2) < topOrdIndices(b._2._2) }) map { _._1 }
+        topOrdIndices.toSeq.sortBy(_._2).map({case (ps,_) =>
+                                             children.find(_._2._2 == ps) match {
+                                               case Some(ps) => Left(ps._1)
+                                               case None => Right(())
+                                             }
+                                             })
+
+        //children.sortWith({ case (a, b) => topOrdIndices(a._2._2) < topOrdIndices(b._2._2) }) map { _._1 }
       }
 
       // don't write method preconditions
       val planTopologicalOrdering = plan.orderingConstraints.graph.topologicalOrdering.get
       val solutionSequence = planTopologicalOrdering filter { _.schema.isPrimitive } //filterNot { _.schema.name.startsWith("SHOP_method") }
+
+      println("#!verify " + (solutionSequence.zipWithIndex map { case (ps, i) => psNameToVerifyName(ps.schema.name) } mkString ";"))
+
+
+      println("==>")
       println(solutionSequence.zipWithIndex map { case (ps, i) => i + " " + psToString(ps) } mkString "\n")
 
       // if we have also found a hierarchy, output that hierarchy
@@ -446,13 +457,17 @@ object Main {
             getNonCompiledChild(sipChildren.head._1)
           }
 
-        def getSortedChildren(children: Seq[(PlanStep, (PlanStep, PlanStep))], abstractPS: PlanStep) = getAllSortedChildren(children, abstractPS) map getNonCompiledChild
+        def getSortedChildren(children: Seq[(PlanStep, (PlanStep, PlanStep))], abstractPS: PlanStep) : Seq[Either[PlanStep,Unit]] =
+          getAllSortedChildren(children,abstractPS) map {
+          case Left(ps) => Left(getNonCompiledChild(ps))
+          case Right(()) => Right(())
+        }
 
 
         var nextTaskID: Int = planStepIndices.size
 
 
-        def getDecompositionOf(abstractPS: PlanStep): (String, Seq[String], Seq[Int], Seq[PlanStep]) = {
+        def getDecompositionOf(abstractPS: PlanStep): (String, Seq[String], Seq[Int], Seq[Either[PlanStep,Unit]]) = {
           val children: Seq[(PlanStep, (PlanStep, PlanStep))] =
             plan.planStepParentInDecompositionTree.filter(_._2._1 == abstractPS).toSeq //filterNot { _._1.schema.name.startsWith("SHOP_method") }
           val fullMethodName = plan.planStepDecomposedByMethod(abstractPS).name
@@ -461,6 +476,8 @@ object Main {
 
           // sort the children
           val sortedChildren = getSortedChildren(children, abstractPS)
+
+          //println(planStepIndices(abstractPS) + " " + psToString(abstractPS) + ": " + children.size + " " + sortedChildren.size)
 
           var rootChildren: Seq[Int] = Nil
 
@@ -492,18 +509,23 @@ object Main {
 
             (lines.head, lines.tail, rootChildren, sortedChildren)
           } else {
+            val indices = sortedChildren map {
+              case Left(ps) => planStepIndices(ps)
+              case Right(()) => -1
+            }
+
             if (fullMode && abstractPS.schema.name.startsWith("__"))
-              ("", Nil, sortedChildren.map(planStepIndices), sortedChildren)
+              ("", Nil, indices, sortedChildren)
             else
-              (planStepIndices(abstractPS) + " " + psToString(abstractPS) + " -> " + appliedMethod + " " + sortedChildren.map(planStepIndices).mkString(" "), Nil,
-                sortedChildren.map(planStepIndices), sortedChildren)
+              (planStepIndices(abstractPS) + " " + psToString(abstractPS) + " -> " + appliedMethod + " " + indices.mkString(" "), Nil,
+                indices, sortedChildren)
           }
         }
 
 
         val abstractTasksOutput = realAbstractTasks map { case abstractPS =>
           val x = getDecompositionOf(abstractPS)
-          (x._1 :: Nil ++ x._2, x._4)
+          (x._1 :: Nil ++ x._2, x._4 collect {case Left(ps) => ps})
         }
 
         var abstractLines = abstractTasksOutput.flatMap(_._1)
@@ -546,7 +568,9 @@ object Main {
   }
 
   def psNameToSimpleName(name: String, fullMode: Boolean): String =
-    name.split(";").head.replace('[', ' ').replace(',', ' ').replace("__ANTECEDENT", "").replace("__CONSEQUENT__", "").replaceAll("__DISJUNCT-[0-9]*", "")
+    (name.split(";").head + "]").replace('[', ' ').replace(']', ' ').replace(',', ' ').replace("|ANTECEDENT", "").replace("|CONSEQUENT", "").replaceAll("|DISJUNCT-[0-9]*", "")
+
+  def psNameToVerifyName(name: String): String = name.split(";").head + "]"
 }
 
 case class Call(atIndex: Int, atName: String, myID: Int)

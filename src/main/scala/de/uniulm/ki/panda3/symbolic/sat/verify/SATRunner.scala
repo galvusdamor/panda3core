@@ -259,7 +259,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
           }
         }
         //else if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder())
-        //  TotallyOrderedEncoding(timeCapsule, domain, initialPlan, reductionMethod, planLength, offSetToK, defineK, restrictionMethod)
+        //  TotallyOrderedEncoding(timeCapsule, domain, initialPlan, intProblem, reductionMethod, planLength, offSetToK, defineK, restrictionMethod, usePDTMutexes)
         //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
         else {
           encodingToUse match {

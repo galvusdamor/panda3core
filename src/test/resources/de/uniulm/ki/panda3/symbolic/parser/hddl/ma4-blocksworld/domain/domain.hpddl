@@ -67,8 +67,8 @@
  
   (:method done
     :parameters (?a - ARM)
-    :precondition (forall (?b - BLOCK) (done ?b))
-    :task (achieve-goals ?a))
+    :task (achieve-goals ?a)
+    :precondition (forall (?b - BLOCK) (done ?b)))
    
   (:action pickup
     :parameters (?b - BLOCK ?a - ARM)

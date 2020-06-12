@@ -16,10 +16,7 @@
 
 package de.uniulm.ki.panda3.translation;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.*;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -30,6 +27,23 @@ import java.util.regex.Pattern;
 public class formatConverterRonToOurs {
 
     public static void main(String[] strs) throws Exception {
+        File f = new File("/home/gregor/Workspace/Panda3/panda3core/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl");
+        assert(f.isDirectory());
+        for (File pd : f.listFiles())
+            for (File ed : pd.listFiles())
+                for (File pf : ed.listFiles()) {
+                    if (pf.getAbsolutePath().endsWith("hddl")) continue;
+                    String oldName = pf.getAbsolutePath();
+                    String newName = oldName.replaceFirst("\\.pddl",".hddl").replaceFirst("\\.hpddl",".hddl");
+                    System.out.println(newName);
+                    System.out.println(oldName);
+                    main2(new String[]{oldName,newName});
+                }
+    }
+
+
+
+    public static void main2(String[] strs) throws Exception {
         if (false) {
             System.out.println("This program translates HTN domain and problem representations from the format used by " +
                     "Ron Alford to the format used by PANDA (starting with version 3).");
@@ -39,11 +53,14 @@ public class formatConverterRonToOurs {
         //String inFile = "/home/dh/Schreibtisch/test-ron/domain-block.hpddl";
         //String outFile = "/home/dh/Schreibtisch/test-ron/domain-block.hpddl-2";
 
-        String inFile = "/home/dh/Schreibtisch/test-ron/pfile_005.pddl";
-        String outFile = "/home/dh/Schreibtisch/test-ron/pfile_005.pddl-2";
+        //String inFile = "/home/dh/Schreibtisch/test-ron/pfile_005.pddl";
+        //String outFile = "/home/dh/Schreibtisch/test-ron/pfile_005.pddl-2";
 
         //String inFile = "C:\\Projekte\\panda3\\src\\test\\resources\\de\\uniulm\\ki\\panda3\\symbolic\\parser\\hddl\\towers\\domain\\domain.hpddl";
         //String outFile = "C:\\Projekte\\panda3\\src\\test\\resources\\de\\uniulm\\ki\\panda3\\symbolic\\parser\\hddl\\towers\\domain\\domain.hpddl-2";
+
+        String inFile = strs[0];
+        String outFile = strs[1];
 
         String txtFile = readFile(inFile);
 
@@ -81,7 +98,7 @@ public class formatConverterRonToOurs {
             }
         }
         bw.write(" (:htn\n");
-        bw.write("  :tasks (and\n");
+        bw.write("  :ordered-tasks (and\n");
 
         for (String def : tasks) {
             bw.write(transformInitialTN(def, taskReplacement) + "\n");
@@ -230,7 +247,8 @@ public class formatConverterRonToOurs {
         String typed = aParameters.substring(1, aParameters.length() - 1);
         String[] split = typed.split(" ");
         String typeless = "";
-        for (int i = 0; i < split.length; i += 3) {
+        for (int i = 0; i < split.length; i ++) {
+            if (!split[i].startsWith("?")) continue;
             typeless += split[i] + " ";
         }
         typeless = typeless.trim();
@@ -271,7 +289,9 @@ public class formatConverterRonToOurs {
             def = def.substring(0, taskPos) + "    :parameters ()\n" + def.substring(taskPos);
         }
         List<String> taskList = new ArrayList<>();
+        if (def.indexOf("\n", taskPos) != -1)
         taskList.add(def.substring(taskPos, def.indexOf("\n", taskPos)));
+        else taskList.add(def.substring(taskPos, def.lastIndexOf(")")));
         int tasksStart = def.indexOf(":tasks");
         int tasksEnd = def.lastIndexOf(")");
         if (tasksStart != -1) {

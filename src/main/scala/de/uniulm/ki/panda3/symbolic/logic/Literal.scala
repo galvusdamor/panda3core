@@ -110,7 +110,7 @@ case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: S
 
   def =!=(groundLiteral: GroundLiteral): Boolean = this.predicate == groundLiteral.predicate && this.parameter.sameElements(groundLiteral.parameter)
 
-  override def update(domainUpdate: DomainUpdate): Formula = GroundLiteral(predicate update domainUpdate, isPositive, parameter map { _ update domainUpdate })
+  override def update(domainUpdate: DomainUpdate): GroundLiteral = GroundLiteral(predicate update domainUpdate, isPositive, parameter map { _ update domainUpdate })
 
   override val containedVariables: Set[Variable] = Set()
 

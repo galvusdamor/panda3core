@@ -782,6 +782,10 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   // don't include SHOP method preconditions, or their compiled abstract tasks (e.g. disjunctions in method preconditions) here
   lazy val subtasksTopologicalOrdering = orderingConstraints.fullGraph.topologicalOrdering.get filterNot { _.schema.name.startsWith(SHOPMethodCompiler.SHOP_METHOD_PRECONDITION_PREFIX) }
   lazy val subtasksWithOrderedIndices  = subtasksTopologicalOrdering.zipWithIndex.toMap
+
+
+  lazy val subtasksTopologicalOrderingWithSHOPTasks = orderingConstraints.fullGraph.topologicalOrdering.get
+  lazy val subtasksWithOrderedIndicesWithSHOPTasks  = subtasksTopologicalOrderingWithSHOPTasks.zipWithIndex.toMap
 }
 
 

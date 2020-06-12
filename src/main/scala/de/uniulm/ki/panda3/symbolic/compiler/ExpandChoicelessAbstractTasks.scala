@@ -64,9 +64,9 @@ object ExpandChoicelessAbstractTasks extends DecompositionMethodTransformer[Unit
 
             val newSubPlan = possibleDecompositions.head.newSubPlan
             // determined at hoc here. This method is "recreated" in the output
-            val addedPlanStepsIDsInOriginal = newSubPlan.subtasksWithOrderedIndices
-            val originalPlanStepsWithIDs = plan.subtasksWithOrderedIndices
-            val newPlanPlanStepsWithIDs = modifiedPlan.subtasksWithOrderedIndices
+            val addedPlanStepsIDsInOriginal = newSubPlan.subtasksWithOrderedIndicesWithSHOPTasks
+            val originalPlanStepsWithIDs = plan.subtasksWithOrderedIndicesWithSHOPTasks
+            val newPlanPlanStepsWithIDs = modifiedPlan.subtasksWithOrderedIndicesWithSHOPTasks
 
             /*println("\n\nMETHOD\nNew")
             println(newPlanPlanStepsWithIDs.map(ps => ps._2 + ": " + ps._1.id + " " + ps._1.schema.name).mkString("\n"))
@@ -82,11 +82,10 @@ object ExpandChoicelessAbstractTasks extends DecompositionMethodTransformer[Unit
                 else (newID, originalPlanStepsWithIDs(ps))
               })
 
-
             (modifiedPlan, "<" + currentName + ";" + planStepToReplace.schema.name.replaceAll(";.*]","]") + ";" + possibleDecompositions.head.originalDecompositionMethod.name + ";" +
               originalPlanStepsWithIDs(planStepToReplace) + ";" +
               newSubtasksToIDInEitherPlan.map({ case (a, b) => b }).mkString(",") +
-              ">"
+             ">"
             )
         })
 

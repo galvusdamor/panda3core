@@ -74,11 +74,14 @@ case class IntProblem(domain: Domain, initialPlan: Plan,
       domain.predicates flatMap { p1 =>
         val l1 = (p1, initialPlan.init.schema.addEffectsAsPredicateSet contains p1)
         domain.predicates collect { case p2 if p1 != p2 => (l1, (p2, true)) :: (l1, (p2, false)) :: Nil } flatten
-      } map { case ((ap, ab), (bp, bb)) if ap < bp => ((ap, ab), (bp, bb)); case ((ap, ab), (bp, bb)) if bp < ap => ((bp, bb), (ap, ab)) } map { case ((ap, ab), (bp, bb)) =>
-        (pMap(ap) * (if (ab) 1 else -1), pMap(bp) * (if (bb) 1 else -1))
+      } map { case ((ap, ab), (bp, bb)) if pMap(ap) < pMap(bp) => ((ap, ab), (bp, bb)); case ((ap, ab), (bp, bb)) if pMap(bp) < pMap(ap) => ((bp, bb), (ap, ab)) } map {
+        case ((ap, ab), (bp, bb)) => (pMap(ap) * (if (ab) 1 else -1), pMap(bp) * (if (bb) 1 else -1))
       } distinct
 
-    println("candidates build")
+    assert(v0 forall {case (a,b) => Math.abs(a) < Math.abs(b)})
+
+
+    println("candidates build " + v0.size)
 
     def filter(invar: Array[(Int, Int)], tasks: Seq[IntTask]): Array[(Int, Int)] = {
       // marked for deleteion
@@ -192,7 +195,9 @@ case class IntProblem(domain: Domain, initialPlan: Plan,
     val time002 = System.currentTimeMillis()
     println("Invariant time: " + (time002 - time001) / 1000.0)
     println("Number of invariants: " + res.size)
-    //println(invariants map { case (a, b) => (if (!a._2) "-" else "") + a._1.name + " v " + (if (!b._2) "-" else "") + b._1.name } mkString ("\n"))
+    //println(res map {case (a,b) => a + " v " + b} mkString "\n")
+    //println(res map {case (a,b) => (if (a < 0) "not " else "") + mapP(Math.abs(a)).name + " v " + (if (b < 0) "not " else "") + mapP(Math.abs(b)).name} mkString "\n")
+
     res
   }
 
@@ -221,6 +226,8 @@ case class IntProblem(domain: Domain, initialPlan: Plan,
     val time1 = System.currentTimeMillis()
 
     def applicable(task1: IntTask, task2: IntTask): Boolean = {
+      //println("\n\n")
+      //println(task1.task.name + " " + task2.task.name)
       var counter = false
       // incompatibe preconditions via invariants
       var i = 0
@@ -228,6 +235,8 @@ case class IntProblem(domain: Domain, initialPlan: Plan,
         var j = 0
         while (!counter && j < task2.preList.length) {
           counter |= checkInvariant(-task1.preList(i), -task2.preList(j))
+          //println("Checking: " + task1.preList(i) + " " + task2.preList(j) + " " + counter)
+          //println("Checking: " + mapP(task1.preList(i)).name + " " + mapP(task2.preList(j)).name + " " + counter)
           j += 1
         }
         i += 1
@@ -279,6 +288,8 @@ case class IntProblem(domain: Domain, initialPlan: Plan,
     val allSCCS = fullDG.stronglyConnectedComponents
     val time3 = System.currentTimeMillis()
     println(((allSCCS map { _.size } groupBy { x => x }).toSeq.sortBy(_._1) map { case (k, s) => s.size + "x" + k } mkString ", ") + " in " + (time3 - time2) / 1000.0)
+
+    //println(fullDG.edgeList map {case (t1,t2) => t1.name + " -> " + t2.name} mkString "\n")
 
     (fullDG, nonExtendedDG)
   }

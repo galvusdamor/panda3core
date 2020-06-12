@@ -120,7 +120,7 @@ object ReduceGeneralTasks extends DomainTransformer[Unit] {
   private def disjunctionSimplification(gt: GeneralTask, f: Or[Formula], rest: Formula): Simplification = {
     val replacement = gt.copy(isPrimitive = false, precondition = And(Nil), effect = And(Nil))
     val newTasks = f.disjuncts.zipWithIndex map { case (g, i) =>
-      gt.copy(name = s"${gt.name }__DISJUNCT-${i }", precondition = join(g, rest))
+      gt.copy(name = s"${gt.name }|DISJUNCT-${i }", precondition = join(g, rest))
     }
     val newMethods = newTasks map { t =>
       SimpleDecompositionMethod(replacement, simplePlan(t, replacement.parameters), s"_M-${t.name }")
@@ -131,11 +131,11 @@ object ReduceGeneralTasks extends DomainTransformer[Unit] {
   private def conditionalSimplification(gt: GeneralTask, f: When, rest: Formula): Simplification = {
     val replacement = gt.copy(isPrimitive = false, precondition = And(Nil), effect = And(Nil))
     val t1 = gt.copy(
-                      name = s"${gt.name }__ANTECEDENT",
+                      name = s"${gt.name }|ANTECEDENT",
                       precondition = join(moveNegationsInwards(Not(f.left)), gt.precondition),
                       effect = rest)
     val t2 = gt.copy(
-                      name = s"${gt.name }__CONSEQUENT__",
+                      name = s"${gt.name }|CONSEQUENT",
                       precondition = join(f.left, gt.precondition),
                       effect = join(f.right, rest))
     val m1 = SimpleDecompositionMethod(replacement, simplePlan(t1, replacement.parameters), s"_M-${t1.name }")
@@ -144,10 +144,11 @@ object ReduceGeneralTasks extends DomainTransformer[Unit] {
   }
 
   private def existentialSimplification(gt: GeneralTask, f: Exists, rest: Formula): Simplification = {
-    val v = f.v.copy(name = s"${f.v.name }__EXISTENTIAL-${Variable.nextFreeVariableID() }")
+    val v = f.v.copy(name = s"${f.v.name }|EXISTENTIAL-${Variable.nextFreeVariableID() }")
     val replacement = gt.copy(
                                precondition = join(f.formula update ExchangeVariable(f.v, v), rest),
-                               parameters = gt.parameters :+ v
+                               parameters = gt.parameters :+ v,
+                               artificialParametersRepresentingConstants = gt.artificialParametersRepresentingConstants :+ v
                              )
     Simplification(gt, replacement, Nil, Nil)
   }
@@ -155,7 +156,7 @@ object ReduceGeneralTasks extends DomainTransformer[Unit] {
   private def universalSimplification(gt: GeneralTask, f: Forall, rest: Formula, isPrec: Boolean): Simplification = {
     val vs = f.v.sort.allElements map { c =>
       f.v.copy(
-                name = s"${f.v.name }__UNIVERSAL-${Variable.nextFreeVariableID() }__",
+                name = s"${f.v.name }|UNIVERSAL-${Variable.nextFreeVariableID() }",
                 sort = f.v.sort.copy(name = f.v.sort.name + ">" + c.name, elements = Seq(c), subSorts = Nil)
               )
     }
