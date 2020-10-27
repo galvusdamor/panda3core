@@ -137,7 +137,7 @@ subtask_id : NAME;
 // @HDDL
 // @LABEL {The ordering constraints are defined via the task ids. They have to induce a partial order.}
 ordering_defs : '(' ')' | ordering_def | '(' 'and' ordering_def+ ')';
-ordering_def : '(' subtask_id '<' subtask_id ')';
+ordering_def : '(' '<' subtask_id subtask_id ')' | '(' subtask_id '<' subtask_id ')';
 
 //
 // Variable Constraits

@@ -766,7 +766,10 @@ public class hddlPanda3Visitor {
         Tuple2<Formula, Seq<ActionCost>> splittedCost = f2.splitFormulaAndCostFunction();
         ActionCost actionCost;
         if (costMetricName == null) {
-            actionCost = new ConstantActionCost(1);
+            if (taskName.contains("method_precondition") /*|| taskName.startsWith("US_") || taskName.startsWith("x__")*/)
+                actionCost = new ConstantActionCost(0);
+            else
+                actionCost = new ConstantActionCost(1);
         } else {
             if (splittedCost._2.isEmpty())
                 actionCost = new ConstantActionCost(0);

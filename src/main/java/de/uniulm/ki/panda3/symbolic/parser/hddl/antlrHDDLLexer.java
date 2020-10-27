@@ -1,19 +1,4 @@
-// PANDA 3 -- a domain-independent planner for classical and hierarchical planning
-// Copyright (C) 2014-2018 the original author or authors.
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+// Generated from /mnt/swap/Workspace/panda3core/src/main/java/de/uniulm/ki/panda3/symbolic/parser/hddl/antlrHDDL.g4 by ANTLR 4.8
 package de.uniulm.ki.panda3.symbolic.parser.hddl;
 import org.antlr.v4.runtime.Lexer;
 import org.antlr.v4.runtime.CharStream;
@@ -26,7 +11,7 @@ import org.antlr.v4.runtime.misc.*;
 
 @SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast"})
 public class antlrHDDLLexer extends Lexer {
-	static { RuntimeMetaData.checkVersion("4.7", RuntimeMetaData.VERSION); }
+	static { RuntimeMetaData.checkVersion("4.8", RuntimeMetaData.VERSION); }
 
 	protected static final DFA[] _decisionToDFA;
 	protected static final PredictionContextCache _sharedContextCache =
@@ -51,42 +36,51 @@ public class antlrHDDLLexer extends Lexer {
 		"DEFAULT_MODE"
 	};
 
-	public static final String[] ruleNames = {
-		"T__0", "T__1", "T__2", "T__3", "T__4", "T__5", "T__6", "T__7", "T__8", 
-		"T__9", "T__10", "T__11", "T__12", "T__13", "T__14", "T__15", "T__16", 
-		"T__17", "T__18", "T__19", "T__20", "T__21", "T__22", "T__23", "T__24", 
-		"T__25", "T__26", "T__27", "T__28", "T__29", "T__30", "T__31", "T__32", 
-		"T__33", "T__34", "T__35", "T__36", "T__37", "T__38", "T__39", "T__40", 
-		"T__41", "T__42", "T__43", "T__44", "T__45", "T__46", "T__47", "T__48", 
-		"T__49", "T__50", "T__51", "T__52", "T__53", "T__54", "T__55", "T__56", 
-		"T__57", "T__58", "T__59", "T__60", "T__61", "T__62", "T__63", "T__64", 
-		"T__65", "T__66", "T__67", "REQUIRE_NAME", "VAR_NAME", "NAME", "COMMENT", 
-		"WS", "NUMBER"
-	};
+	private static String[] makeRuleNames() {
+		return new String[] {
+			"T__0", "T__1", "T__2", "T__3", "T__4", "T__5", "T__6", "T__7", "T__8", 
+			"T__9", "T__10", "T__11", "T__12", "T__13", "T__14", "T__15", "T__16", 
+			"T__17", "T__18", "T__19", "T__20", "T__21", "T__22", "T__23", "T__24", 
+			"T__25", "T__26", "T__27", "T__28", "T__29", "T__30", "T__31", "T__32", 
+			"T__33", "T__34", "T__35", "T__36", "T__37", "T__38", "T__39", "T__40", 
+			"T__41", "T__42", "T__43", "T__44", "T__45", "T__46", "T__47", "T__48", 
+			"T__49", "T__50", "T__51", "T__52", "T__53", "T__54", "T__55", "T__56", 
+			"T__57", "T__58", "T__59", "T__60", "T__61", "T__62", "T__63", "T__64", 
+			"T__65", "T__66", "T__67", "REQUIRE_NAME", "VAR_NAME", "NAME", "COMMENT", 
+			"WS", "NUMBER"
+		};
+	}
+	public static final String[] ruleNames = makeRuleNames();
 
-	private static final String[] _LITERAL_NAMES = {
-		null, "'('", "'define'", "'domain'", "')'", "':requirements'", "':types'", 
-		"'-'", "':constants'", "':predicates'", "':functions'", "'number'", "':task'", 
-		"':parameters'", "':precondition'", "':effect'", "':method'", "':subtasks'", 
-		"':tasks'", "':ordered-subtasks'", "':ordered-tasks'", "':ordering'", 
-		"':order'", "':constraints'", "':causal-links'", "':causallinks'", "'and'", 
-		"'<'", "'not'", "'type'", "'typeof'", "'sort'", "'sortof'", "':action'", 
-		"'or'", "'imply'", "'exists'", "'forall'", "'at end'", "'always'", "'sometime'", 
-		"'at-most-once'", "'sometime-after'", "'sometime-before'", "'preference'", 
-		"'when'", "'assign'", "'scale-down'", "'scale-up'", "'increase'", "'decrease'", 
-		"'/'", "'+'", "'*'", "'='", "'(='", "'either'", "'problem'", "':domain'", 
-		"':objects'", "':init'", "':goal'", "':htn'", "':htnti'", "':metric'", 
-		"'minimize'", "'maximize'", "'(-'", "'total-time'"
-	};
-	private static final String[] _SYMBOLIC_NAMES = {
-		null, null, null, null, null, null, null, null, null, null, null, null, 
-		null, null, null, null, null, null, null, null, null, null, null, null, 
-		null, null, null, null, null, null, null, null, null, null, null, null, 
-		null, null, null, null, null, null, null, null, null, null, null, null, 
-		null, null, null, null, null, null, null, null, null, null, null, null, 
-		null, null, null, null, null, null, null, null, null, "REQUIRE_NAME", 
-		"VAR_NAME", "NAME", "COMMENT", "WS", "NUMBER"
-	};
+	private static String[] makeLiteralNames() {
+		return new String[] {
+			null, "'('", "'define'", "'domain'", "')'", "':requirements'", "':types'", 
+			"'-'", "':constants'", "':predicates'", "':functions'", "'number'", "':task'", 
+			"':parameters'", "':precondition'", "':effect'", "':method'", "':subtasks'", 
+			"':tasks'", "':ordered-subtasks'", "':ordered-tasks'", "':ordering'", 
+			"':order'", "':constraints'", "':causal-links'", "':causallinks'", "'and'", 
+			"'<'", "'not'", "'type'", "'typeof'", "'sort'", "'sortof'", "':action'", 
+			"'or'", "'imply'", "'exists'", "'forall'", "'at end'", "'always'", "'sometime'", 
+			"'at-most-once'", "'sometime-after'", "'sometime-before'", "'preference'", 
+			"'when'", "'assign'", "'scale-down'", "'scale-up'", "'increase'", "'decrease'", 
+			"'/'", "'+'", "'*'", "'='", "'(='", "'either'", "'problem'", "':domain'", 
+			"':objects'", "':init'", "':goal'", "':htn'", "':htnti'", "':metric'", 
+			"'minimize'", "'maximize'", "'(-'", "'total-time'"
+		};
+	}
+	private static final String[] _LITERAL_NAMES = makeLiteralNames();
+	private static String[] makeSymbolicNames() {
+		return new String[] {
+			null, null, null, null, null, null, null, null, null, null, null, null, 
+			null, null, null, null, null, null, null, null, null, null, null, null, 
+			null, null, null, null, null, null, null, null, null, null, null, null, 
+			null, null, null, null, null, null, null, null, null, null, null, null, 
+			null, null, null, null, null, null, null, null, null, null, null, null, 
+			null, null, null, null, null, null, null, null, null, "REQUIRE_NAME", 
+			"VAR_NAME", "NAME", "COMMENT", "WS", "NUMBER"
+		};
+	}
+	private static final String[] _SYMBOLIC_NAMES = makeSymbolicNames();
 	public static final Vocabulary VOCABULARY = new VocabularyImpl(_LITERAL_NAMES, _SYMBOLIC_NAMES);
 
 	/**
