@@ -203,6 +203,7 @@ object Information {
   val ERROR        = "00 global:99:error"
 
   val SOLUTION_LENGTH = "01 solution:01:number of primitive plan steps"
+  val SOLUTION_COST = "01 solution:02:cost of solution"
 
   val ACYCLIC                      = "02 properties:01:acyclic"
   val MOSTLY_ACYCLIC               = "02 properties:02:mostly acyclic"

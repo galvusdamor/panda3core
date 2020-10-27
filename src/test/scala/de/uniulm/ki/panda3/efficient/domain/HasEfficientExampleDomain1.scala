@@ -45,14 +45,14 @@ trait HasEfficientExampleDomain1 {
     * 5: task4(0,1) :       : +1(0),+1(1),+0()
     * 6: task5(0)   : +1(0) : +1(0)
     */
-  val init   = new EfficientTask(true, Array(), Array(), Array(), Array(), false, true,false)
-  val goal   = new EfficientTask(true, Array(), Array(), Array(new EfficientLiteral(0, true, Array())), Array(), false, true,false)
-  val task1  = new EfficientTask(true, Array(0), Array(), Array(new EfficientLiteral(0, true, Array())), Array(new EfficientLiteral(1, true, Array(0))), true, false,false)
-  val task2  = new EfficientTask(true, Array(0), Array(), Array(new EfficientLiteral(1, true, Array(0))), Array(), true, false,false)
-  val task3  = new EfficientTask(false, Array(0, 0), Array(), Array(new EfficientLiteral(1, true, Array(1))), Array(new EfficientLiteral(1, false, Array(0))), true, false,false)
+  val init   = new EfficientTask(true, Array(), Array(), Array(), Array(), 0,false, true,false)
+  val goal   = new EfficientTask(true, Array(), Array(), Array(new EfficientLiteral(0, true, Array())), Array(), 0,false, true,false)
+  val task1  = new EfficientTask(true, Array(0), Array(), Array(new EfficientLiteral(0, true, Array())), Array(new EfficientLiteral(1, true, Array(0))), 0,true, false,false)
+  val task2  = new EfficientTask(true, Array(0), Array(), Array(new EfficientLiteral(1, true, Array(0))), Array(), 0,true, false,false)
+  val task3  = new EfficientTask(false, Array(0, 0), Array(), Array(new EfficientLiteral(1, true, Array(1))), Array(new EfficientLiteral(1, false, Array(0))), 0,true, false,false)
   val task4  = new EfficientTask(false, Array(0, 0), Array(), Array(),
-                                 Array(new EfficientLiteral(1, true, Array(0)), new EfficientLiteral(1, true, Array(1)), new EfficientLiteral(0, true, Array())), true, false,false)
-  val task5  = new EfficientTask(true, Array(0), Array(), Array(new EfficientLiteral(1, true, Array(0))), Array(new EfficientLiteral(1, true, Array(0))), false, false,false)
+                                 Array(new EfficientLiteral(1, true, Array(0)), new EfficientLiteral(1, true, Array(1)), new EfficientLiteral(0, true, Array())), 0,true, false,false)
+  val task5  = new EfficientTask(true, Array(0), Array(), Array(new EfficientLiteral(1, true, Array(0))), Array(new EfficientLiteral(1, true, Array(0))), 0,false, false,false)
   val domain = new EfficientDomain(Array(Array()), Array(Array(0), Array(0), Array(0)), Array(Array(), Array(0), Array(0, 0)), Array(init, goal, task1, task2, task3, task4, task5), Array())
 
   val problemConfiguration = ProblemConfiguration(true, true)

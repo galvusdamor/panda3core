@@ -209,11 +209,11 @@ trait LiftedPreconditionRelaxationTDGHeuristic extends DeduceCausalLinksTSTGHeur
 }
 
 trait LiftedMinimumActionCount extends TSTGHeuristic {
-  override protected def computeHeuristicForPrimitive(taskID: Int): Double =
-    if (domain.tasks(taskID).isMethodPrecondition)
-      0 else 1 // TODO: hackx
+  override protected def computeHeuristicForPrimitive(taskID: Int): Double = domain.tasks(taskID).actionCost
+    //if (domain.tasks(taskID).isMethodPrecondition)
+      //0 else 1 // TODO: hackx
 
-  override protected def computeHeuristicForMethod(methodID: Int): Double = 0
+  protected def computeHeuristicForMethod(methodID: Int): Double = 0
 
   protected def initialDeductionFromHeuristicValue(plan: EfficientPlan): Double = plan.numberOfPrimitivePlanSteps - 1
 

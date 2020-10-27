@@ -164,7 +164,8 @@ object ReduceGeneralTasks extends DomainTransformer[Unit] {
     val replacement = gt.copy(
                                precondition = if (isPrec) g else gt.precondition,
                                effect = if (isPrec) gt.effect else g,
-                               parameters = gt.parameters ++ vs
+                               parameters = gt.parameters ++ vs,
+                               artificialParametersRepresentingConstants = gt.artificialParametersRepresentingConstants ++ vs
                              )
     Simplification(gt, replacement, Nil, Nil)
   }
