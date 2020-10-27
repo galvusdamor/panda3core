@@ -539,7 +539,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
               if (solution.nonEmpty) {
                 //println(solution.get._1 map {ps => ps.schema.name + " " + ps.schema.cost} mkString("\n"))
+
+                println("Computing the upper bound")
                 upperBound = solution.get._1.map(ps => ps.schema.cost match {case ConstantActionCost(x) => x}).sum
+                println("Computing the lower bound")
                 lowerBound = VerifyEncoding.lowerBoundOnNonPlanExistence(domainAndPlan._1, domainAndPlan._2, currentK - 1)
                 ////////////////////////////////////////////// 2. step optimise
                 println("Starting cost optimisation, using binary search = " + optimise)
@@ -582,6 +585,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               // I could not prove optimality
               if ((!optimise && betterPossible) || (optimise && upperBound > lowerBound + 1) || error || usedTime < 0 || solution.isEmpty) (None, false) else {
                 informationCapsule.set(Information.SOLUTION_LENGTH, solution.get._1.length)
+                informationCapsule.set(Information.SOLUTION_COST, solution.get._1.map(_.schema.cost.getFixedCost).sum)
                 (solution, false)
               }
 

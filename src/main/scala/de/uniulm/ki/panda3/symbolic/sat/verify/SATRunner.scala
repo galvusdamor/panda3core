@@ -51,7 +51,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
   private val fileDir = System.getProperty("os.name").toLowerCase() match {
     case osname if osname startsWith "windows"  => ""
     case osname if osname startsWith "mac os x" => "./"
-    case _                                      => "/dev/shm/" // normal OSes
+    //case _                                      => "/dev/shm/" // normal OSes
+    case _                                      => "./" // normal OSes
   }
 
 
@@ -78,6 +79,12 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                        checkSolution: Boolean = false, runOptimiser: Boolean = false):
   (Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])], Boolean, Boolean) = {
 
+
+    //val K = VerifyEncoding.computeTDG(domain,initialPlan,15,Math.max, 0)
+
+    //println("DP-K: " + K)
+
+    //System exit 0
 
 
     /*domain.primitiveTasks foreach {pt =>
@@ -258,8 +265,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
             case ExistsStepEncoding  => ExistsStep(timeCapsule, domain, initialPlan, intProblem, planLength, -1, additionalDisablingGraphEdges)
           }
         }
-        //else if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder())
-        //  TotallyOrderedEncoding(timeCapsule, domain, initialPlan, intProblem, reductionMethod, planLength, offSetToK, defineK, restrictionMethod, usePDTMutexes)
+        else if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder())
+          TotallyOrderedEncoding(timeCapsule, domain, initialPlan, intProblem, reductionMethod, planLength, offSetToK, defineK, restrictionMethod, usePDTMutexes)
         //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
         else {
           encodingToUse match {
