@@ -46,7 +46,14 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 ## Building PANDA
 
 To obtain an executable jar of PANDA, you need an installation of the 
-simple build tool (version 0.13.9 or higher). If you have, please run
+simple build tool (version 0.13.9 or higher). You further need antLR4.
+
+To compile PANDA, you first need to generate the parser files for HDDL.
+You can do so by executing the following command in the planner's root folder:
+
+    antlr4 src/main/java/de/uniulm/ki/panda3/symbolic/parser/hddl/antlrHDDL.g4 -package de.uniulm.ki.panda3.symbolic.parser.hddl
+
+Next you need to run
 
     sbt main/assembly
 
