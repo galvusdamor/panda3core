@@ -90,7 +90,6 @@ trait DecompositionMethodTransformer[Information] extends DomainTransformer[Info
       (_topTask, _topMethod, true)
     }
 
-
     val (extendedMethods, newTasksProposed) = transformMethods(domain.decompositionMethods filterNot { _ == topMethod }, topMethod, info, domain)
 
     val newTasks = newTasksProposed filterNot domain.taskSet.contains
@@ -122,10 +121,16 @@ trait DecompositionMethodTransformer[Information] extends DomainTransformer[Info
     }
 
     val numberOfTopMethods = extendedMethods count { _.abstractTask == topTask }
-    if (numberOfTopMethods == 0) {
+    if (!addedTop) {
+      if (numberOfTopMethods == 0){
+        // No new top added, but the transformer threw it away anyway
+        val remainingTopMethod = topMethod.subPlan
+        val newPlan = remainingTopMethod.replaceInitAndGoal(plan.init, plan.goal, Nil)
+        (domain.copy(decompositionMethods = extendedMethods filterNot { _.abstractTask == topTask }, tasks = domain.tasks ++ newTasks, sasPlusRepresentation = newSasPlus), newPlan)
+      } else
+        (domain.copy(decompositionMethods = extendedMethods, tasks = domain.tasks ++ newTasks, sasPlusRepresentation = newSasPlus), plan)
+    } else if (numberOfTopMethods == 0) {
       // if the compiler does not want to add a top method, it's ok
-      (domain.copy(decompositionMethods = extendedMethods, tasks = domain.tasks ++ newTasks), plan)
-    } else if (!addedTop) {
       (domain.copy(decompositionMethods = extendedMethods, tasks = domain.tasks ++ newTasks, sasPlusRepresentation = newSasPlus), plan)
     } else if (numberOfTopMethods == 1 && allowToRemoveTopMethod) {
       // regenerate the initial plan, as it may have changed
