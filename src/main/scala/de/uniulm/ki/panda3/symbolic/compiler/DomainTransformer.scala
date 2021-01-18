@@ -124,7 +124,7 @@ trait DecompositionMethodTransformer[Information] extends DomainTransformer[Info
     val numberOfTopMethods = extendedMethods count { _.abstractTask == topTask }
     if (numberOfTopMethods == 0) {
       // if the compiler does not want to add a top method, it's ok
-      (domain.copy(decompositionMethods = extendedMethods :+ topMethod, tasks = domain.tasks ++ newTasks), plan)
+      (domain.copy(decompositionMethods = extendedMethods, tasks = domain.tasks ++ newTasks), plan)
     } else if (!addedTop) {
       (domain.copy(decompositionMethods = extendedMethods, tasks = domain.tasks ++ newTasks, sasPlusRepresentation = newSasPlus), plan)
     } else if (numberOfTopMethods == 1 && allowToRemoveTopMethod) {
