@@ -1,3 +1,10 @@
+# More Background Information
+
+We've put together a website with the history of all planning systems of the PANDA family, links to all relevant software projects, and further background information including pointers explaining the techniques deployed by the respective systems.
+
+- You find it on https://panda-planner-dev.github.io/
+- or, as a forward, on http://panda.hierarchical-task.net
+
 # PANDA Planning and Acting in a Network Decomposition Architecture
 
 PANDA is a planning architecture consisting of various components for planning
