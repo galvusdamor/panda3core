@@ -48,6 +48,15 @@ lazy val tlt = (project in (file("assembly") / "tlt")).settings(assemblySettings
             assemblyJarName in assembly := "tlt.jar",
             mainClass in assembly := Some("de.uniulm.ki.panda3.planRecognition.switchTLT")
           )
+// A transformer converting PCP instances into HTN planning problems
+// The actual generator and its readme can be found in the IPC repository
+// (see: https://github.com/panda-planner-dev/ipc2020-domains)
+lazy val PostCorrespondenceProblemToHTN = (project in (file("assembly") / "PostCorrespondenceProblemToHTN")).settings(assemblySettings: _*).
+  settings(
+            target := file("assembly") / "PostCorrespondenceProblemToHTN",
+            assemblyJarName in assembly := "PostCorrespondenceProblemToHTN.jar",
+            mainClass in assembly := Some("de.uniulm.ki.panda3.problemGenerators.pcpGenerator.PostCorrespondenceProblemToHTN")
+          )
 
 /*lazy val csvExtractor = (project in (file("assembly") / "csvExtractor")).settings(assemblySettings: _*).
   settings(
